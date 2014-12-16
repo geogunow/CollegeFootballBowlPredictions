@@ -1,0 +1,47 @@
+Bowl games are data points.....so cycle through them
+This is helpful because the official name is provided which can then be cross referenced
+
+1. cycle through data once to find opp name, team name etc
+2. Make oppname link in a dictionary
+3. Make features....
+
+feature vector:
+(BASIC)
+
+team A/B:
+- distance to stadium (total)
+- distance to stadium (north-south)
+- points for
+- points against
+- heisman trophy winner
+- rating
+- # wins
+- # losses
+- sch score
+- Top 10 wins
+- Top 10 losses
+- Top 30 wins
+- Top 30 losses
+- (Conference)
+
+
+TODO: Get locations of CFB stadiums
+NOTE: Limit training to 2000+
+
+(ADVANCED??)
+- distance to stadium (total)
+- distance to stadium (north-south)
+- points for
+- points against
+- # of all americans
+- heisman trophy winner
+- # of first + second team
+- # of first + second + third team
+- rating
+- # wins
+- # losses
+- sch score
+- Top 10 wins
+- Top 10 losses
+- Top 30 wins
+- Top 30 losses
