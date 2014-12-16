@@ -1,2 +1,0 @@
-"W/L" "Date" "PF" "Opponent" "PA" "Bowl" "Other" "Month" "Day" "Year" "Team"
-"L" "12-20-1958" 13 "Northeastern St. (OK)" 19 "Holiday Bowl (2) - NAIA Championship Game" 1 12 20 1958 "Northern Arizona"

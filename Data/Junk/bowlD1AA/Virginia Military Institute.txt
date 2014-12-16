@@ -1,2 +1,0 @@
-"W.L" "Date" "PF" "Opponent" "PA" "Bowl" "Other" "Month" "Day" "Year" "Team"
-NA NA NA NA NA NA NA NA NA NA "Virginia Military Institute"
