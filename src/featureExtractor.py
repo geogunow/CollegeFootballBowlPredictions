@@ -71,7 +71,7 @@ def extractBowlResults():
                     gameList[key] = game
                     # pprint (vars(game))
 
-    return gameList
+    return gameList.values()
 
 """
 A function that extracts matchups for coming bowl games
@@ -382,7 +382,7 @@ def formFeatureVectors(final = False):
     if final:
         bowls = extractNewBowls()
     else:
-        bowls = extractBowlResults().values()
+        bowls = extractBowlResults()
 
     # cycle through all recorded bowl games
     for game in bowls:
