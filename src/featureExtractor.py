@@ -181,6 +181,36 @@ def extractTrJamesNaming():
     return nameDict
 
 """
+Extract naming dictionary for college football team names from csv name
+associations file. This dicitonary maps a name from the current bowl pickem
+by James Sparks to the original name.
+"""
+def reverseJamesNaming():
+    
+    # dictionary of team name associations
+    nameDict = dict()
+
+    # search through bowl games file
+    with open('../Data/teamNamesMerge.csv','r') as csvfile:
+        
+        # read file and extract header
+        reader = csv.reader(csvfile, skipinitialspace = True)
+        header = reader.next()
+        
+        # cycle through lines
+        for line in reader:
+
+            # extract information
+            name = line[-2]
+            orig = line[0]
+
+            # add to dictionary
+            nameDict[name] = orig
+             
+    return nameDict
+
+
+"""
 Function that returns a dictionary of team statistics form tream rankings (tr)
 """
 def formTrStatistics():
@@ -229,14 +259,14 @@ def formTrStatistics():
                             away = dataImputeFloat(value, data[6])
 
                             stats[category][y][team] = \
-                                    [value, rank, last3, home, away]
+                                    [rank, value, last3, home, away]
                         
                         else:
                             # determine wins and losses
                             wins = int(record[0])
                             losses = int(record[1])
                             stats[category][y][team] = \
-                                    [value, rank, wins, losses]
+                                    [rank, value, wins, losses]
     return stats
 
 """
@@ -282,11 +312,53 @@ def getTeamName(string):
     else:
         return string, None
 
+
+"""
+Reads through College-Football-2013-11-04.csv to determine the conference of
+each team for the relevant years (2003 and onward). 2014 data is missing so it
+is pulled from 2013 with corrections made for Rutgers and Maryland
+"""
+def extractConferences():
+
+    # list of relevant bowl games
+    conferenceMapping = dict()
+
+    # search through bowl games file
+    with open('../Data/College-Football-2014-11-04.csv','r') as csvfile:
+        
+        reader = csv.reader(csvfile, skipinitialspace = True)
+        header = reader.next()
+        
+        for line in reader:
+            
+            # extract year
+            year = int(line[0])
+
+            # determine if year is greater than 2003-2004 season onward
+            if year >= 2003:
+            
+                # extract team and confernce
+                team = line[4]
+                conference = line[17]
+
+                # load new team into dictionary if new
+                if team not in conferenceMapping:
+                    conferenceMapping[team] = dict()
+
+                # add the year and conference information
+                conferenceMapping[team][year] = conference
+
+                # determine 2014 conference by carrying over from 2013
+                if year == 2013:
+                    conferenceMapping[team][2014] = conference
+
+    return conferenceMapping
+
 """
 Function that creates a list of feature vectors for each bowl game along with
 a list of labels (win/loss) for previous bowl games.
 """
-def formFeatureVectors():
+def formFeatureVectors(final = False):
 
     # initialize data set to store feature information such as features
     data = dataSet()
@@ -294,32 +366,73 @@ def formFeatureVectors():
     # load statistics
     teamStats = formTrStatistics()
 
+    # load conferences
+    teamConferences = extractConferences()
+
+    if final:
+        reverseNaming = reverseJamesNaming()
+    
     # load dictionary for team name associations
-    trNames = extractTrNaming()
+    if final: 
+        trNames = extractTrJamesNaming()
+    else:
+        trNames = extractTrNaming()
+
+    # get bowl games
+    if final:
+        bowls = extractNewBowls()
+    else:
+        bowls = extractBowlResults().values()
 
     # cycle through all recorded bowl games
-    for game in extractBowlResults().values():
+    for game in bowls:
+
+        if final:
+            resultA = None
+            resultB = None
+        else:
+            resultA = game.resultA
+            resultB = 1-resultA
 
         # create team A features
         teamA = trNames[game.teamA]
         teamAFeatures = createTeamFeatures(teamStats, teamA, game.season,
-                game.resultA)
+                resultA)
 
         # create team B features
         teamB = trNames[game.teamB]
-        teamBFeatures = createTeamFeatures(teamStats, teamB, game.season,
-                1-game.resultA)
+        teamBFeatures = createTeamFeatures(teamStats, teamB, game.season, 
+                resultB)
+
+        # get orignal team A and team B names
+        teamAOrig = game.teamA
+        teamBOrig = game.teamB
+        
+        # if final dataset, correct names
+        if final:
+            teamAOrig = reverseNaming[teamAOrig]
+            teamBOrig = reverseNaming[teamBOrig]
+
+        # add conference for tream A
+        conference = teamConferences[teamAOrig][game.season]
+        teamAConference = createConferenceFeatures( conference )
+
+        # add conference for tream B
+        conference = teamConferences[teamBOrig][game.season]
+        teamBConference = createConferenceFeatures( conference )
 
         #TODO: add distance feature by game name, team names
 
         # form total feature vector
-        featureVector = teamAFeatures + teamBFeatures
+        featureVector = teamAFeatures + teamBFeatures + teamAConference +\
+                teamBConference
 
         # append feature vector to list (Xdata)
         data.X.append(featureVector)
 
-        # append outcome to Ydata
-        data.Y.append(game.resultA)
+        if not final:
+            # append outcome to Ydata
+            data.Y.append(game.resultA)
 
         # form lists of teamA, teamB, year
         data.teamAList.append(teamA)
@@ -348,43 +461,34 @@ def createTeamFeatures(teamStats, team, year, result):
     return features
 
 """
-Function that creates a list of feature vectors for 2014-2015 bowls
+Checks the conference and makes a categorical feature which is represented
+as 13 binary features (13 possible categories)
 """
-def formFinalFeatureVectors():
+def createConferenceFeatures(conference):
+    conferences = ['Atlantic Coast Conference',
+                    'Big East Conference',
+                    'Big 12 Conference',
+                    'Big Ten Conference',
+                    'Pacific-12 Conference',
+                    'Mountain West Conference',
+                    'Division I-A Independent',
+                    'Mid-American Conference',
+                    'Sun Belt Conference',
+                    'Western Athletic Conference',
+                    'Conference USA',
+                    'Southeastern Conference',
+                    'American Athletic Conference']
 
-    # initialize data set to store feature information such as features
-    data = dataSet()
+    featureVector = []
+    for test_conference in conferences:
+        
+        # test if conference is correct
+        if conference == test_conference:
+            featureVector.append(1)
+            alarm = False
+        else:
+            featureVector.append(0)
 
-    # load statistics
-    teamStats = formTrStatistics()
+    return featureVector
 
-    # load dictionary for team name associations
-    trNames = extractTrJamesNaming()
-
-    # cycle through all recorded bowl games
-    for game in extractNewBowls():
-
-        # create team A features
-        teamA = trNames[game.teamA]
-        teamAFeatures = createTeamFeatures(teamStats, teamA, game.season, None)
-
-        # create team B features
-        teamB = trNames[game.teamB]
-        teamBFeatures = createTeamFeatures(teamStats, teamB, game.season, None)
-
-        #TODO: add distance feature by game name, team names
-
-        # form total feature vector
-        featureVector = teamAFeatures + teamBFeatures
-
-        # append feature vector to list (Xdata)
-        data.X.append(featureVector)
-
-        # form lists of teamA, teamB, year
-        data.teamAList.append(teamA)
-        data.teamBList.append(teamB)
-        data.yearList.append(game.season)
-        data.nameList.append(game.name)
-
-    return data
 

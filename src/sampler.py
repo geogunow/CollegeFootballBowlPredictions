@@ -100,24 +100,24 @@ def sampleTrainTestValByYear(data):
     for n in range(N):
 
         # check year for training
-        if data.yearList[n] < 2011:
+        if data.yearList[n] < 2012:
 
             # copy all variables from that game to training set
             for i, var in enumerate(dataVars):
                 trainVars[i].append(var[n])
 
-        # check year for validation
-        elif data.yearList[n] > 2010 and data.yearList[n] < 2013:
+        # check year for test set (2013)
+        elif data.yearList[n] == 2013:
 
             # copy all variables from that game to validation set
             for i, var in enumerate(dataVars):
-                valVars[i].append(var[n])
+                testVars[i].append(var[n])
 
-        # remaining data (2013) is test set
+        # remaining data  is validation set
         else:
             # copy all variables from that game to test set
             for i, var in enumerate(dataVars):
-                testVars[i].append(var[n])
+                valVars[i].append(var[n])
 
     return train, test, validate
 

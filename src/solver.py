@@ -2,6 +2,7 @@ from featureExtractor import *
 from sampler import *
 from sklearn.svm import SVC as SVM
 from sklearn.linear_model import LogisticRegression as LR
+from sklearn import preprocessing
 from IO import *
 
 """
@@ -12,10 +13,12 @@ hyper-parameters.
 def classifySVM(Xtrain, Ytrain, Xval, Yval):
     
     # set range of C parameters to test
-    cvals = np.logspace(-2,7,40)
+    #cvals = np.logspace(-2,7,40)
+    cvals = [405]
 
     # set range of gamma values to test
-    gammas = np.logspace(-10,2,40)
+    #gammas = np.logspace(-10,2,40)
+    gammas = [0.00015]
 
     # find most accurate combination of C, gamma
     best_accuracy = 0
@@ -34,6 +37,7 @@ def classifySVM(Xtrain, Ytrain, Xval, Yval):
             accuracy = clf.score(Xval, Yval)
 
             if accuracy >= best_accuracy:
+                print "C = ", c, " gamma = ", g, " -> ", accuracy
                 best_accuracy = accuracy
                 best_model = clf
                 best_c = c
@@ -47,6 +51,8 @@ def classifySVM(Xtrain, Ytrain, Xval, Yval):
 
     return best_model
 
+
+
 """
 Function that classifies using a logistic regression approach on the input 
 feature vectors Xtrain and labels Ytrain. Validation sets Xval and Yval are 
@@ -55,24 +61,27 @@ used to tune hyper-parameters.
 def classifyLR(Xtrain, Ytrain, Xval, Yval):
     
     # set range of C parameters to test
-    cvals = np.logspace(-2,7,40)
+    # cvals = np.logspace(-3,3,100)
+    cvals = [0.1]
 
     # find most accurate value for C
     best_accuracy = 0
     best_model = None
-    best_c = None
+    best_c = None     # best c = 0.004
 
     # cycle through all values of C 
     for c in cvals:
         clf = LR(penalty='l2', dual=False, tol=0.0001, C=c, fit_intercept=True,
                 intercept_scaling=1, class_weight=None, random_state=None) 
         clf.fit(Xtrain, Ytrain)
-        accuracy = clf.score(Xval, Yval)
 
+        accuracy = clf.score(Xval, Yval)
         if accuracy >= best_accuracy:
             best_accuracy = accuracy
             best_model = clf
             best_c = c
+        
+        print "C = ", c, " -> ", accuracy
 
     print "Optimal LR parameters: C = ", best_c
     print "Best validation accuracy = " + str(best_accuracy)
@@ -118,24 +127,31 @@ if __name__ == '__main__':
 
     # sample data into three data sets
     train, test, validate = sampleTrainTestValByYear(data)
-    #straightSampleTrainTestVal(data)
+
+    # scale data
+    scaler = preprocessing.StandardScaler().fit(train.X)
+    train.X = scaler.transform(train.X)
+    test.X = scaler.transform(test.X)
+    validate.X = scaler.transform(validate.X)
 
     # find SVM model
-    #svmModel = classifySVM(train.X, train.Y, validate.X, validate.Y)
-    #print "Test accuracy = ", svmModel.score(test.X, test.Y), "\n"
+    svmModel = classifySVM(train.X, train.Y, validate.X, validate.Y)
+    print "Test accuracy = ", svmModel.score(test.X, test.Y), "\n"
 
     # find LR model
     lrModel = classifyLR(train.X, train.Y, validate.X, validate.Y)
     print "Test accuracy = ", lrModel.score(test.X, test.Y), "\n"
    
+    predictionModel = svmModel
     scoringModel = lrModel
-    predictionModel = lrModel
 
     # score a season
     confidences = scoreSeason( predictionModel, scoringModel, test )
     print_results( predictionModel, test, confidences )
     
+    
     # print final predictions
-    finalData = formFinalFeatureVectors()
+    finalData = formFeatureVectors(final=True)
+    finalData.X = scaler.transform(finalData.X)
     confidences = scoreSeason( predictionModel, scoringModel, finalData )
-    print_predictions( predictionModel, finalData, confidences )
+    #print_predictions( predictionModel, finalData, confidences )
